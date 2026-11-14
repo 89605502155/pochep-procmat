@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "pochep-procmat: matrix decompositions for the process memory model M t = p"
+type: software
+version: 0.0.1
+date-released: 2026-11-13
+license: MIT
+repository-code: "https://github.com/89605502155/pochep-procmat"
+url: "https://pypi.org/project/pochep-procmat/"
+authors:
+  - family-names: Ferubko
+    given-names: Andrey O.
+    affiliation: "Bryansk State University of Engineering and Technology"
+    email: ferubko1999@yandex.ru
+    orcid: "https://orcid.org/0009-0006-5625-137X"
+  - family-names: Kazakov
+    given-names: Oleg D.
+    affiliation: "Bryansk State University of Engineering and Technology"
+    email: kazakov@bgitu.ru
+    orcid: "https://orcid.org/0000-0001-9665-8138"
+keywords:
+  - matrix decomposition
+  - SVD
+  - QR
+  - NMF
+  - process memory

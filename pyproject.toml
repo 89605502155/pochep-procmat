@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pochep-procmat"
+version = "0.0.1"
+description = "Matrix decompositions (QR, SVD, Cholesky, NNLS, NMF) for the process memory model M t = p"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+  { name = "Andrey O. Ferubko", email = "ferubko1999@yandex.ru" },
+  { name = "Oleg D. Kazakov", email = "kazakov@bgitu.ru" },
+]
+maintainers = [
+  { name = "Andrey O. Ferubko", email = "ferubko1999@yandex.ru" },
+]
+keywords = ["matrix decomposition", "SVD", "QR", "NMF", "memory", "process", "linear model"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering :: Mathematics",
+]
+dependencies = ["numpy>=2.0"]
+
+[project.urls]
+Homepage = "https://github.com/89605502155/pochep-procmat"
+Repository = "https://github.com/89605502155/pochep-procmat"
+Demo = "https://github.com/89605502155/pochep-procmat-demo"
+Changelog = "https://github.com/89605502155/pochep-procmat/blob/main/CHANGELOG.md"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pochep_procmat"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
