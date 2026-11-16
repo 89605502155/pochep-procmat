@@ -16,7 +16,7 @@ from pochep_procmat.core import (
 from pochep_procmat.model import METHODS, FitResult, ProcessMemoryModel
 from pochep_procmat.synthetic import make_process_profiles
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 __all__ = [
     "METHODS",

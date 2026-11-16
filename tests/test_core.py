@@ -119,3 +119,64 @@ def test_cosine_similarity_bounds():
     assert cosine_similarity([1.0, 0.0], [0.0, 3.0]) == pytest.approx(0.0)
     with pytest.raises(ValueError):
         cosine_similarity([0.0, 0.0], [1.0, 1.0])
+
+
+def _kkt_ok(m, p, t, rtol=1e-8):
+    w = m.T @ (p - m @ t)
+    scale = np.abs(m).sum(axis=0).max() * max(1.0, np.abs(p).max())
+    pos = t > 0
+    return np.all(t >= 0) and np.all(np.abs(w[pos]) <= rtol * scale) and np.all(w[~pos] <= rtol * scale)
+
+
+def _nnls_brute(m, p):
+    import itertools
+
+    n = m.shape[1]
+    best, best_f = np.zeros(n), float(np.sum(p**2))
+    for k in range(1, n + 1):
+        for cols in itertools.combinations(range(n), k):
+            sub = np.linalg.lstsq(m[:, cols], p, rcond=None)[0]
+            if np.any(sub < 0):
+                continue
+            t = np.zeros(n)
+            t[list(cols)] = sub
+            f = float(np.sum((m @ t - p) ** 2))
+            if f < best_f:
+                best, best_f = t, f
+    return best, best_f
+
+
+@pytest.mark.parametrize("seed", range(20))
+def test_nnls_matches_brute_force(seed):
+    rng = np.random.default_rng(100 + seed)
+    m = rng.normal(size=(15, 5))
+    p = rng.normal(size=15)
+    t = solve_nnls(m, p)
+    _, f_best = _nnls_brute(m, p)
+    assert float(np.sum((m @ t - p) ** 2)) == pytest.approx(f_best, rel=1e-9, abs=1e-9)
+    assert _kkt_ok(m, p, t)
+
+
+def test_nnls_converges_on_badly_scaled_columns():
+    # Columns of very different magnitude, as RSS of processes in MB (regression for 0.0.1,
+    # where projected gradient stopped far from the optimum).
+    rng = np.random.default_rng(7)
+    base = rng.uniform(0.5, 1.5, size=(400, 6)) + np.linspace(0, 1, 400)[:, None]
+    m = base * np.array([10.0, 30.0, 300.0, 500.0, 4000.0, 9.0])
+    t_true = np.array([0.6, 0.7, 1.3, 0.0, 1.0, 0.0])
+    p = m @ t_true + rng.normal(scale=5.0, size=400)
+    t = solve_nnls(m, p)
+    assert _kkt_ok(m, p, t)
+    t_ls = np.linalg.lstsq(m, p, rcond=None)[0]
+    if np.all(t_ls >= 0):
+        assert np.allclose(t, t_ls, rtol=1e-8, atol=1e-8)
+
+
+def test_nnls_zero_rhs_and_validation():
+    m = np.eye(3)
+    assert np.all(solve_nnls(m, np.zeros(3)) == 0)
+    assert np.allclose(solve_nnls(m, np.array([1.0, -2.0, 3.0])), [1.0, 0.0, 3.0])
+    with pytest.raises(ValueError):
+        solve_nnls(m, np.ones(3), max_iter=0)
+    with pytest.raises(ValueError):
+        solve_nnls(m, np.ones(3), tol=-1.0)

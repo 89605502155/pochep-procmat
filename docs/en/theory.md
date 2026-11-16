@@ -15,7 +15,9 @@ The normal equations `(M^T M + λ I) t = M^T p` are solved by Cholesky factorisa
 makes the system solvable when `M` is rank deficient. The price is that the condition number is squared.
 
 If the process weights must be non-negative, the problem `min ||M t - p||` with `t >= 0` (NNLS) is solved
-by projected gradient descent with step `1/L`, where `L` is the largest eigenvalue of `M^T M`.
+by the Lawson and Hanson active set method. Each step solves least squares on the passive set, and the
+result satisfies the Karush-Kuhn-Tucker conditions up to rounding. Version 0.0.1 used projected gradient
+descent with step `1/L`, which could stop far from the optimum on badly scaled columns.
 
 Non-negative matrix factorisation (NMF) finds `M ~ W H` with `W >= 0` and `H >= 0`. Columns of `W` can be
 read as latent profiles and rows of `H` as their shares in each process. The factors come from Lee and Seung

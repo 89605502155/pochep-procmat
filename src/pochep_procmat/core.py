@@ -128,30 +128,59 @@ def solve_nnls(
     M: ArrayLike,
     p: ArrayLike,
     *,
-    max_iter: int = 20000,
+    max_iter: int | None = None,
     tol: float = 1e-12,
 ) -> FloatArray:
     """Non-negative least squares ``min ||M t - p||`` subject to ``t >= 0``.
 
-    Solved by projected gradient descent with the step ``1 / L``, where ``L`` is the
-    largest eigenvalue of ``M^T M``. Stops when the relative change of ``t`` is below ``tol``.
+    Solved by the active set method of Lawson and Hanson. Each inner step solves an
+    unconstrained least squares problem on the passive set with ``numpy.linalg.lstsq``.
+    On return the Karush-Kuhn-Tucker conditions hold up to the tolerance: the gradient
+    ``w = M^T (p - M t)`` is near zero where ``t > 0`` and not positive where ``t = 0``.
+
+    ``max_iter`` limits the outer iterations (default ``3 * n``, where ``n`` is the number
+    of columns). ``tol`` is relative to ``||M||_1 * ||p||_inf`` and is raised to the level of
+    rounding errors if it is smaller. ``RuntimeError`` is raised if the limit is reached.
     """
     m, vec = _check_pair(M, p)
+    n = m.shape[1]
+    if max_iter is None:
+        max_iter = 3 * n
     if max_iter < 1:
         raise ValueError("max_iter must be at least 1")
-    gram = m.T @ m
-    lipschitz = float(np.linalg.eigvalsh(gram)[-1])
-    rhs = m.T @ vec
-    t = np.zeros(m.shape[1])
-    if lipschitz == 0.0:
-        return t
+    if tol < 0:
+        raise ValueError("tol must be non-negative")
+    scale = float(np.abs(m).sum(axis=0).max()) * max(1.0, float(np.abs(vec).max()))
+    eps_tol = 10.0 * np.finfo(np.float64).eps * max(m.shape) * scale
+    thresh = max(tol * scale, eps_tol)
+    t = np.zeros(n)
+    passive = np.zeros(n, dtype=bool)
+    w = m.T @ vec
     for _ in range(max_iter):
-        grad = gram @ t - rhs
-        t_new = np.maximum(0.0, t - grad / lipschitz)
-        change = np.linalg.norm(t_new - t)
-        t = t_new
-        if change <= tol * max(1.0, np.linalg.norm(t)):
-            break
+        free = ~passive
+        if not np.any(free) or float(w[free].max()) <= thresh:
+            return t
+        j = int(np.argmax(np.where(free, w, -np.inf)))
+        passive[j] = True
+        while True:
+            s = np.zeros(n)
+            s[passive] = np.linalg.lstsq(m[:, passive], vec, rcond=None)[0]
+            bad = passive & (s <= 0.0)
+            if not np.any(bad):
+                break
+            ratio = t[bad] / (t[bad] - s[bad])
+            alpha = float(ratio.min())
+            t = t + alpha * (s - t)
+            passive &= t > eps_tol / max(scale, 1.0)
+            t[~passive] = 0.0
+            if not np.any(passive):
+                s = np.zeros(n)
+                break
+        t = s
+        w = m.T @ (vec - m @ t)
+    free = ~passive
+    if np.any(free) and float(w[free].max()) > thresh:
+        raise RuntimeError("solve_nnls did not converge within max_iter outer iterations")
     return t
 
 
